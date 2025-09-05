@@ -203,16 +203,16 @@ class JiraConnectionHelper:
         Raises:
             Exception: If connection fails
         """
-        from jira_agile_metrics.jira_api_fix import create_patched_jira_client
+        from jira import JIRA
         
         try:
-            # Configure JIRA client to use API v3 with search/jql endpoint fix
+            # Configure JIRA client to use API v3
             options = {
                 'server': server,
                 'rest_api_version': '3'
             }
             
-            jira_client = create_patched_jira_client(
+            jira_client = JIRA(
                 options=options,
                 basic_auth=(username, password)
             )
@@ -241,7 +241,7 @@ class JiraConnectionHelper:
         Raises:
             Exception: If connection fails
         """
-        from jira_agile_metrics.jira_api_fix import create_patched_jira_client
+        from jira import JIRA
         
         try:
             connection_config = config_options['connection']
@@ -263,7 +263,7 @@ class JiraConnectionHelper:
             # Merge with any additional client options from config
             jira_options.update(connection_config.get('jira_client_options', {}))
             
-            jira_client = create_patched_jira_client(
+            jira_client = JIRA(
                 options=jira_options,
                 basic_auth=auth
             )
@@ -368,7 +368,7 @@ def run_analysis_from_config(config_file_path: str,
     Raises:
         Exception: If analysis fails
     """
-    from jira_agile_metrics.querymanager import QueryManager
+    from jira_agile_metrics.fixed_querymanager import create_fixed_query_manager
     from jira_agile_metrics.calculators.cycletime import calculate_cycle_times
     from jira_agile_metrics.calculators.scatterplot import calculate_scatterplot_data
     
@@ -388,8 +388,8 @@ def run_analysis_from_config(config_file_path: str,
     if jql_override:
         settings['queries'] = [{'jql': jql_override, 'value': 'Analysis'}]
     
-    # Create query manager
-    query_manager = QueryManager(jira_client, settings)
+    # Create query manager with fixed endpoint
+    query_manager = create_fixed_query_manager(jira_client, settings)
     
     # Auto-detect committed and done columns if not specified
     cycle = settings['cycle']

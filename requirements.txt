@@ -16,3 +16,7 @@ Jinja2
 pytest-mock
 mock
 trello
+# Interactive analysis dependencies
+plotly>=5.0.0
+ipywidgets>=8.0.0
+jupyter

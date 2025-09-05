@@ -206,8 +206,14 @@ class JiraConnectionHelper:
         from jira import JIRA
         
         try:
+            # Configure JIRA client to use API v3
+            options = {
+                'server': server,
+                'rest_api_version': '3'
+            }
+            
             jira_client = JIRA(
-                server=server,
+                options=options,
                 basic_auth=(username, password)
             )
             
@@ -248,10 +254,18 @@ class JiraConnectionHelper:
             else:
                 raise ValueError("No authentication credentials found in config")
             
+            # Configure JIRA client options with API v3
+            jira_options = {
+                'server': connection_config['domain'],
+                'rest_api_version': '3'
+            }
+            
+            # Merge with any additional client options from config
+            jira_options.update(connection_config.get('jira_client_options', {}))
+            
             jira_client = JIRA(
-                server=connection_config['domain'],
-                basic_auth=auth,
-                options=connection_config.get('jira_client_options', {})
+                options=jira_options,
+                basic_auth=auth
             )
             
             # Test connection

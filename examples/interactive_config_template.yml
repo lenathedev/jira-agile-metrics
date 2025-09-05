@@ -31,6 +31,11 @@ workflow:
 #   Team: Team
 #   Story Points: Story Points
 
+# Optional: JIRA client options (API v3 is used automatically)
+# connection:
+#   jira client options:
+#     timeout: 30
+
 # Optional: Limit results for testing
 # output:
 #   max results: 100

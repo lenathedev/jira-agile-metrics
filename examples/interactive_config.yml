@@ -24,8 +24,11 @@ connection:
   # https proxy: https://proxy.company.com:8080
   
   # Optional: JIRA client options
-  # jira client options:
-  #   verify: false  # Disable SSL verification if needed
+  # The system automatically uses API v3, but you can override if needed
+  jira client options:
+    # rest_api_version: '3'  # Automatically set to v3
+    # verify: false  # Disable SSL verification if needed
+    # timeout: 30    # Request timeout in seconds
 
 # Query Configuration
 # Option 1: Single query

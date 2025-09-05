@@ -131,6 +131,8 @@ output:
 - **Username**: Your email address
 - **Domain**: Your JIRA instance URL
 
+**Important**: The system automatically uses JIRA REST API v3 to ensure compatibility with modern JIRA Cloud instances. If you encounter API-related errors, this should resolve them.
+
 ### JQL Query Examples
 
 ```sql
@@ -245,6 +247,11 @@ pip install plotly ipywidgets
 - Use API token instead of password
 - Check network connectivity
 - Verify credentials in config file
+
+**"JiraError HTTP 410" or "API has been removed"**
+- This is automatically fixed - the system now uses JIRA API v3
+- If you still see this error, check your JIRA instance supports API v3
+- Older JIRA Server instances may need different configuration
 
 **"No issues with cycle times found"**
 - Verify workflow configuration in YAML matches your JIRA statuses

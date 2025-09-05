@@ -1,0 +1,131 @@
+# Interactive Cycle Time Analysis Configuration
+# This file follows the same structure as the main jira-agile-metrics application
+
+# JIRA Connection Configuration
+connection:
+  # JIRA server URL (required)
+  domain: https://your-company.atlassian.net
+  
+  # Connection type (jira or trello)
+  type: jira
+  
+  # Authentication - use either username/password or username/token
+  username: your-email@company.com
+  
+  # Use API token instead of password (recommended)
+  # Generate from: https://id.atlassian.com/manage-profile/security/api-tokens
+  token: your-api-token-here
+  
+  # Alternative: use password (not recommended)
+  # password: your-password-here
+  
+  # Optional: HTTP proxy settings
+  # http proxy: http://proxy.company.com:8080
+  # https proxy: https://proxy.company.com:8080
+  
+  # Optional: JIRA client options
+  # jira client options:
+  #   verify: false  # Disable SSL verification if needed
+
+# Query Configuration
+# Option 1: Single query
+query: project = "MYPROJECT" AND issuetype = Story AND status in (Done, Closed) AND resolved >= -90d ORDER BY resolved DESC
+
+# Option 2: Multiple queries with attributes (uncomment to use)
+# queries:
+#   attribute: Team
+#   criteria:
+#     - value: Team A
+#       jql: project = "MYPROJECT" AND "Team" = "Team A" AND status = Done
+#     - value: Team B  
+#       jql: project = "MYPROJECT" AND "Team" = "Team B" AND status = Done
+
+# Workflow Configuration
+# Map your JIRA statuses to logical workflow stages
+workflow:
+  Backlog:
+    - Backlog
+    - New
+    - Open
+    - To Do
+  
+  Committed:
+    - Ready
+    - Next
+    - Selected for Development
+  
+  In Progress:
+    - In Progress
+    - Development
+    - Coding
+  
+  Review:
+    - Code Review
+    - Review
+    - Testing
+    - QA
+    - Peer Review
+  
+  Done:
+    - Done
+    - Closed
+    - Resolved
+    - Completed
+
+# Optional: Custom field mappings
+# Map human-readable names to JIRA field IDs or names
+attributes:
+  Team: Team
+  Story Points: Story Points
+  Epic Link: Epic Link
+  Priority: Priority
+  Component: Component/s
+  # Custom field example:
+  # Business Value: customfield_12345
+
+# Optional: Known values for multi-value fields
+# When a field has multiple values, pick the first one from this list
+known values:
+  Priority:
+    - Highest
+    - High
+    - Medium
+    - Low
+    - Lowest
+  Component:
+    - Frontend
+    - Backend
+    - Database
+    - Infrastructure
+
+# Output Configuration (optional)
+# These settings control chart generation and data export
+output:
+  # Quantiles to show on charts
+  quantiles:
+    - 0.5   # 50th percentile (median)
+    - 0.85  # 85th percentile
+    - 0.95  # 95th percentile
+  
+  # Date format for charts
+  date format: "%Y-%m-%d"
+  
+  # Limit analysis to recent data (days)
+  scatterplot window: 90
+  
+  # Chart titles
+  scatterplot chart title: "Cycle Time Analysis"
+  
+  # Maximum number of issues to fetch (optional)
+  # Leave blank or comment out to fetch all matching issues
+  # max results: 500
+
+# Optional: Advanced settings
+settings:
+  # Verbose logging
+  verbose: false
+  
+  # Override automatic column detection
+  # backlog column: Backlog
+  # committed column: Committed  
+  # done column: Done

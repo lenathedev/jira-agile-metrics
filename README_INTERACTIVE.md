@@ -20,52 +20,116 @@ This extension adds interactive Jupyter notebook capabilities to the JIRA Agile 
 pip install -r requirements.txt
 ```
 
-### 2. Launch Jupyter Notebook
+### 2. Create Configuration File
+
+Copy and customize the template:
+
+```bash
+cp examples/interactive_config_template.yml my_config.yml
+```
+
+Edit `my_config.yml` with your JIRA details:
+
+```yaml
+connection:
+  domain: https://your-company.atlassian.net
+  username: your-email@company.com
+  token: your-api-token
+
+query: project = "YOUR_PROJECT" AND status = Done
+
+workflow:
+  Backlog: [Backlog, To Do]
+  In Progress: [In Progress, Development]
+  Done: [Done, Closed]
+```
+
+### 3. Launch Jupyter Notebook
 
 ```bash
 jupyter notebook interactive_cycle_time_analysis.ipynb
 ```
 
-### 3. Follow the Notebook Steps
+### 4. Follow the Notebook Steps
 
-1. **Connect to JIRA**: Enter your credentials
-2. **Configure Workflow**: Map JIRA statuses to workflow stages
-3. **Enter JQL Query**: Specify which issues to analyze
-4. **Run Analysis**: Fetch and process data
-5. **Generate Plot**: Create interactive visualization
-6. **Export Data**: Save results for further use
+1. **Load Configuration**: Enter path to your config file
+2. **Review Settings**: Optionally override workflow or query settings
+3. **Run Analysis**: Fetch and process data using config
+4. **Generate Plot**: Create interactive visualization
+5. **Export Data**: Save results for further use
 
 ## Alternative: Command Line Script
 
-For a simpler command-line interface:
+For a simpler command-line interface (still requires interactive input):
 
 ```bash
 python examples/interactive_analysis_example.py
 ```
 
-## Configuration
-
-### JIRA Connection
-
-- **Server URL**: Your JIRA instance URL (e.g., `https://company.atlassian.net`)
-- **Username**: Your email or username
-- **API Token**: Generate from JIRA Account Settings → Security → API tokens
-
-### Workflow Configuration
-
-Default workflow stages:
+Or use the new config-based approach programmatically:
 
 ```python
-[
-    {"name": "Backlog", "statuses": ["Backlog", "New", "Open"]},
-    {"name": "Committed", "statuses": ["To Do", "Ready", "Next"]},
-    {"name": "In Progress", "statuses": ["In Progress", "Development"]},
-    {"name": "Review", "statuses": ["Code Review", "Review", "Testing"]},
-    {"name": "Done", "statuses": ["Done", "Closed", "Resolved"]}
-]
+from jira_agile_metrics.interactive_analysis import run_analysis_from_config
+
+# Run analysis from config file
+cycle_data, scatter_data, config = run_analysis_from_config(
+    'my_config.yml',
+    max_results=100
+)
+
+# Create interactive plot
+from jira_agile_metrics.interactive_analysis import InteractiveScatterPlot
+plotter = InteractiveScatterPlot(scatter_data, config['connection']['domain'])
+fig = plotter.create_plot()
+fig.show()
 ```
 
-Customize this to match your team's workflow.
+## Configuration
+
+The interactive analysis now uses YAML configuration files with the same format as the main jira-agile-metrics application.
+
+### Configuration File Structure
+
+```yaml
+# JIRA Connection
+connection:
+  domain: https://your-company.atlassian.net
+  type: jira
+  username: your-email@company.com
+  token: your-api-token-here
+
+# Query Configuration
+query: project = "MYPROJECT" AND status = Done
+
+# Workflow Configuration
+workflow:
+  Backlog:
+    - Backlog
+    - New
+    - To Do
+  In Progress:
+    - In Progress
+    - Development
+  Done:
+    - Done
+    - Closed
+
+# Optional: Custom field mappings
+attributes:
+  Team: Team
+  Story Points: Story Points
+
+# Optional: Output settings
+output:
+  max results: 500
+  quantiles: [0.5, 0.85, 0.95]
+```
+
+### JIRA Authentication
+
+- **API Token**: Generate from [JIRA Account Settings → Security → API tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+- **Username**: Your email address
+- **Domain**: Your JIRA instance URL
 
 ### JQL Query Examples
 
@@ -112,14 +176,20 @@ The notebook exports three CSV files:
 
 ## Programmatic Usage
 
-Use the interactive analysis module in your own scripts:
+### Config-Based Analysis
 
 ```python
-from jira_agile_metrics.interactive_analysis import InteractiveScatterPlot
-from jira_agile_metrics.calculators.scatterplot import calculate_scatterplot_data
+from jira_agile_metrics.interactive_analysis import run_analysis_from_config, InteractiveScatterPlot
 
-# Create scatter plot
-plotter = InteractiveScatterPlot(scatter_data, server_url)
+# Run complete analysis from config file
+cycle_data, scatter_data, config = run_analysis_from_config(
+    'my_config.yml',
+    max_results=100,  # Optional override
+    jql_override='project = "MYPROJ" AND resolved >= -30d'  # Optional override
+)
+
+# Create interactive plot
+plotter = InteractiveScatterPlot(scatter_data, config['connection']['domain'])
 fig = plotter.create_plot(
     title="My Team's Cycle Time",
     color_by="blocked_days",
@@ -134,6 +204,28 @@ stats = plotter.get_summary_stats()
 print(f"Average cycle time: {stats['Average Cycle Time (days)']:.1f} days")
 ```
 
+### Manual Analysis
+
+```python
+from jira_agile_metrics.interactive_analysis import InteractiveScatterPlot, load_config_file, JiraConnectionHelper
+from jira_agile_metrics.querymanager import QueryManager
+from jira_agile_metrics.calculators.cycletime import calculate_cycle_times
+
+# Load config and connect
+config = load_config_file('my_config.yml')
+jira_client = JiraConnectionHelper.create_connection_from_config(config)
+query_manager = QueryManager(jira_client, config['settings'])
+
+# Run analysis manually
+cycle_data = calculate_cycle_times(...)
+scatter_data = calculate_scatterplot_data(cycle_data)
+
+# Create plot
+plotter = InteractiveScatterPlot(scatter_data)
+fig = plotter.create_plot()
+fig.show()
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -143,19 +235,25 @@ print(f"Average cycle time: {stats['Average Cycle Time (days)']:.1f} days")
 pip install plotly ipywidgets
 ```
 
+**"Configuration file not found"**
+- Check the file path is correct
+- Use relative paths from notebook directory
+- Copy from examples/ directory and customize
+
 **"Connection failed"**
-- Verify JIRA URL (include https://)
+- Verify JIRA URL in config file (include https://)
 - Use API token instead of password
 - Check network connectivity
+- Verify credentials in config file
 
 **"No issues with cycle times found"**
-- Verify workflow configuration matches your JIRA statuses
-- Check JQL query returns completed issues
+- Verify workflow configuration in YAML matches your JIRA statuses
+- Check JQL query in config returns completed issues
 - Ensure issues have moved through workflow stages
 
 **"Invalid JQL query"**
-- Test query in JIRA's issue search
-- Check field names and project keys
+- Test query in JIRA's issue search first
+- Check field names and project keys in config
 - Verify permissions to access projects
 
 ### Performance Tips

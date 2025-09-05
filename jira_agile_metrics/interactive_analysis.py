@@ -222,6 +222,49 @@ class JiraConnectionHelper:
             raise
     
     @staticmethod
+    def create_connection_from_config(config_options: Dict[str, Any]) -> 'JIRA':
+        """
+        Create a JIRA connection from configuration options.
+        
+        Args:
+            config_options: Configuration dictionary from config_to_options()
+            
+        Returns:
+            JIRA client instance
+            
+        Raises:
+            Exception: If connection fails
+        """
+        from jira import JIRA
+        
+        try:
+            connection_config = config_options['connection']
+            
+            # Determine authentication method
+            if connection_config.get('token'):
+                auth = (connection_config['username'], connection_config['token'])
+            elif connection_config.get('password'):
+                auth = (connection_config['username'], connection_config['password'])
+            else:
+                raise ValueError("No authentication credentials found in config")
+            
+            jira_client = JIRA(
+                server=connection_config['domain'],
+                basic_auth=auth,
+                options=connection_config.get('jira_client_options', {})
+            )
+            
+            # Test connection
+            user = jira_client.current_user()
+            logger.info(f"Connected to JIRA as {user}")
+            
+            return jira_client
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to JIRA from config: {e}")
+            raise
+    
+    @staticmethod
     def validate_jql(jira_client: 'JIRA', jql: str, max_results: int = 1) -> bool:
         """
         Validate a JQL query without fetching all results.
@@ -256,6 +299,111 @@ def create_workflow_template() -> List[Dict[str, Any]]:
         {"name": "Review", "statuses": ["Code Review", "Review", "Testing"]},
         {"name": "Done", "statuses": ["Done", "Closed", "Resolved"]}
     ]
+
+
+def load_config_file(config_file_path: str) -> Dict[str, Any]:
+    """
+    Load and parse a YAML configuration file.
+    
+    Args:
+        config_file_path: Path to the YAML configuration file
+        
+    Returns:
+        Parsed configuration options
+        
+    Raises:
+        Exception: If file cannot be loaded or parsed
+    """
+    import os
+    from jira_agile_metrics.config import config_to_options
+    
+    if not os.path.exists(config_file_path):
+        raise FileNotFoundError(f"Configuration file not found: {config_file_path}")
+    
+    try:
+        with open(config_file_path, 'r') as f:
+            config_data = f.read()
+        
+        config_options = config_to_options(
+            config_data, 
+            cwd=os.path.dirname(config_file_path)
+        )
+        
+        logger.info(f"Configuration loaded from {config_file_path}")
+        return config_options
+        
+    except Exception as e:
+        logger.error(f"Failed to load configuration from {config_file_path}: {e}")
+        raise
+
+
+def run_analysis_from_config(config_file_path: str, 
+                            max_results: Optional[int] = None,
+                            jql_override: Optional[str] = None) -> tuple:
+    """
+    Run complete cycle time analysis from a configuration file.
+    
+    Args:
+        config_file_path: Path to YAML configuration file
+        max_results: Optional limit on number of issues to fetch
+        jql_override: Optional JQL query to override config file
+        
+    Returns:
+        Tuple of (cycle_data, scatter_data, config_options)
+        
+    Raises:
+        Exception: If analysis fails
+    """
+    from jira_agile_metrics.querymanager import QueryManager
+    from jira_agile_metrics.calculators.cycletime import calculate_cycle_times
+    from jira_agile_metrics.calculators.scatterplot import calculate_scatterplot_data
+    
+    # Load configuration
+    config_options = load_config_file(config_file_path)
+    
+    # Create JIRA connection
+    jira_client = JiraConnectionHelper.create_connection_from_config(config_options)
+    
+    # Prepare settings
+    settings = config_options['settings'].copy()
+    
+    # Apply overrides
+    if max_results is not None:
+        settings['max_results'] = max_results
+    
+    if jql_override:
+        settings['queries'] = [{'jql': jql_override, 'value': 'Analysis'}]
+    
+    # Create query manager
+    query_manager = QueryManager(jira_client, settings)
+    
+    # Auto-detect committed and done columns if not specified
+    cycle = settings['cycle']
+    committed_column = settings.get('committed_column')
+    done_column = settings.get('done_column')
+    
+    if not committed_column:
+        committed_column = cycle[1]['name'] if len(cycle) > 1 else cycle[0]['name']
+    if not done_column:
+        done_column = cycle[-1]['name']
+    
+    # Calculate cycle times
+    cycle_data = calculate_cycle_times(
+        query_manager,
+        cycle,
+        settings.get('attributes', {}),
+        committed_column,
+        done_column,
+        settings['queries'],
+        settings.get('query_attribute')
+    )
+    
+    # Calculate scatter plot data
+    scatter_data = calculate_scatterplot_data(cycle_data)
+    
+    logger.info(f"Analysis complete: {len(cycle_data)} total issues, {len(scatter_data)} with cycle times")
+    
+    return cycle_data, scatter_data, config_options
 
 
 def export_analysis_results(cycle_data: pd.DataFrame, 

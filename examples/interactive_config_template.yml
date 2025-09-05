@@ -1,0 +1,36 @@
+# Interactive Cycle Time Analysis Configuration Template
+# Copy this file and customize for your JIRA setup
+
+connection:
+  domain: https://your-company.atlassian.net
+  type: jira
+  username: your-email@company.com
+  token: your-api-token-here
+
+query: project = "YOUR_PROJECT" AND issuetype = Story AND status in (Done, Closed) AND resolved >= -30d ORDER BY resolved DESC
+
+workflow:
+  Backlog:
+    - Backlog
+    - To Do
+  Committed:
+    - Ready
+    - Next
+  In Progress:
+    - In Progress
+    - Development
+  Review:
+    - Review
+    - Testing
+  Done:
+    - Done
+    - Closed
+
+# Optional: Add custom fields
+# attributes:
+#   Team: Team
+#   Story Points: Story Points
+
+# Optional: Limit results for testing
+# output:
+#   max results: 100

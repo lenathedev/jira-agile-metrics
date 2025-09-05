@@ -249,9 +249,10 @@ pip install plotly ipywidgets
 - Verify credentials in config file
 
 **"JiraError HTTP 410" or "API has been removed"**
-- This is automatically fixed - the system now uses JIRA API v3
-- If you still see this error, check your JIRA instance supports API v3
-- Older JIRA Server instances may need different configuration
+- This is automatically fixed - the system now uses the new `/rest/api/3/search/jql` endpoint
+- The fix includes a patched JIRA client that handles the endpoint migration
+- If you still see this error, check your JIRA instance supports the new endpoint
+- The fix includes automatic fallback to the original method if needed
 
 **"No issues with cycle times found"**
 - Verify workflow configuration in YAML matches your JIRA statuses

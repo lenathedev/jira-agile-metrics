@@ -8,46 +8,60 @@ JiraError HTTP 410: The requested API has been removed.
 Please migrate to the /rest/api/3/search/jql API.
 ```
 
+This occurs because Atlassian has deprecated the `/rest/api/3/search` endpoint and now requires the `/rest/api/3/search/jql` endpoint.
+
 ## Solution
-This has been **automatically fixed** in the interactive analysis module. The system now uses JIRA REST API v3 by default.
+This has been **automatically fixed** with a patched JIRA client that uses the new `/rest/api/3/search/jql` endpoint. The system now includes a monkey-patch that redirects search requests to the correct endpoint.
 
 ## What Was Changed
 
-### 1. Interactive Analysis Module
-- Updated `JiraConnectionHelper.create_connection()` to use API v3
-- Updated `JiraConnectionHelper.create_connection_from_config()` to use API v3
-- All JIRA client connections now include `'rest_api_version': '3'`
+### 1. New JIRA API Fix Module
+- Created `jira_agile_metrics/jira_api_fix.py` with endpoint patch
+- Implements `create_patched_jira_client()` function
+- Monkey-patches the JIRA library to use `/rest/api/3/search/jql`
+- Includes fallback to original method if new endpoint fails
 
-### 2. Jupyter Notebook
-- Updated JIRA client creation to use API v3
-- Maintains compatibility with existing configuration files
+### 2. Interactive Analysis Module
+- Updated to use `create_patched_jira_client()` instead of direct JIRA client
+- Automatically applies the search/jql endpoint fix
+- Maintains all existing functionality
 
-### 3. Configuration Templates
-- Updated examples to document API v3 usage
-- Added optional client configuration examples
+### 3. Jupyter Notebook
+- Updated to import and use the patched JIRA client
+- Automatically handles the new endpoint requirement
+- No changes needed to existing configuration files
+
+### 4. Configuration Templates
+- Updated examples to document the automatic fix
+- Added troubleshooting information for the new endpoint
 
 ## Technical Details
 
-### Before (API v2 - deprecated)
+### Before (Deprecated endpoint)
 ```python
-jira_client = JIRA(
-    server=server_url,
-    basic_auth=(username, token)
-)
+# This would fail with HTTP 410
+jira_client = JIRA(options={'server': url, 'rest_api_version': '3'}, basic_auth=auth)
+result = jira_client.search_issues(jql)  # Uses /rest/api/3/search (deprecated)
 ```
 
-### After (API v3 - current)
+### After (Fixed endpoint)
 ```python
-options = {
-    'server': server_url,
-    'rest_api_version': '3'
-}
+# This works with the new endpoint
+from jira_agile_metrics.jira_api_fix import create_patched_jira_client
 
-jira_client = JIRA(
-    options=options,
-    basic_auth=(username, token)
+jira_client = create_patched_jira_client(
+    options={'server': url, 'rest_api_version': '3'},
+    basic_auth=auth
 )
+result = jira_client.search_issues(jql)  # Uses /rest/api/3/search/jql (current)
 ```
+
+### How the Patch Works
+The patch intercepts calls to `search_issues()` and:
+1. Builds the correct URL: `/rest/api/3/search/jql`
+2. Sends the request to the new endpoint
+3. Processes the response in the same format as the original method
+4. Falls back to the original method if the new endpoint fails
 
 ## Configuration Options
 

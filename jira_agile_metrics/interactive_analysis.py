@@ -203,16 +203,16 @@ class JiraConnectionHelper:
         Raises:
             Exception: If connection fails
         """
-        from jira import JIRA
+        from jira_agile_metrics.jira_api_fix import create_patched_jira_client
         
         try:
-            # Configure JIRA client to use API v3
+            # Configure JIRA client to use API v3 with search/jql endpoint fix
             options = {
                 'server': server,
                 'rest_api_version': '3'
             }
             
-            jira_client = JIRA(
+            jira_client = create_patched_jira_client(
                 options=options,
                 basic_auth=(username, password)
             )
@@ -241,7 +241,7 @@ class JiraConnectionHelper:
         Raises:
             Exception: If connection fails
         """
-        from jira import JIRA
+        from jira_agile_metrics.jira_api_fix import create_patched_jira_client
         
         try:
             connection_config = config_options['connection']
@@ -263,7 +263,7 @@ class JiraConnectionHelper:
             # Merge with any additional client options from config
             jira_options.update(connection_config.get('jira_client_options', {}))
             
-            jira_client = JIRA(
+            jira_client = create_patched_jira_client(
                 options=jira_options,
                 basic_auth=auth
             )
